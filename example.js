@@ -1,25 +1,39 @@
 var Stratum = require('./lib/index.js');
 
 var myCoin = {
-    "name": "Catcoin",
-    "symbol": "CTC",
+    "name": "Litecoin",
+    "symbol": "LTC",
     "algorithm": "scrypt"
 };
 
 var myAuxCoins = [{
-    "name": "LottoShares",
-    "symbol": "LTS",
+    "name": "Dogecoin",
+    "symbol": "DOGE",
     "algorithm": "scrypt",
 
     /*  */
     "daemons": [
         {   //Main daemon instance
             "host": "127.0.0.1",
-            "port": 23327, // **NOT ACTUAL PORT**
-            "user": "lottosharesrpc",
-            "password": "By66dCmyX44uUbA7P3qqXJQeT3Ywd8dZ4dJdfgxCAxbg"
+            "port": 22555, // auxcoin daemon RPC port
+            "user": "rpcuser",
+            "password": "supersecret"
         }
-    ],
+	],
+},	{
+	"name": "Syscoin",
+	"symbol": "SYS",
+	"algorithm": "scrypt",
+
+	/*  */
+	"daemons": [
+		{   //Main daemon instance
+	    	"host": "127.0.0.1",
+	        "port": 23327, // **NOT ACTUAL PORT**
+	        "user": "syscoinrpc",
+	        "password": "By66dCmyX44uUbA7P3qqXJQeT3Ywd8dZ4dJdfgxCAxbg"
+	    }
+	],
 }];
 
 var pool = Stratum.createPool({
@@ -29,7 +43,7 @@ var pool = Stratum.createPool({
     "auxes": myAuxCoins,
 
     // Payout address - for primary node only
-    "address": "9iKR9FwwEbWCiU3ZhCAs5dQRVkYoC288Go", //Address to where block rewards are given;
+    "address": "This is a LTC address", //Address to where block rewards are given;
     // shared between all coins, so copy your private key over with dumpprivkey and importprivkey
 
     /* Block rewards go to the configured pool wallet address to later be paid out to miners,
@@ -37,9 +51,10 @@ var pool = Stratum.createPool({
        or to donations address. Addresses or hashed public keys can be used. Here is an example
        of rewards going to the main pool op, a pool co-owner, and NOMP donation. */
     "rewardRecipients": {
-        /* 0.1% donation to NOMP. This pubkey can accept any type of coin, please leave this in
-           your config to help support NOMP development. */
-        "22851477d63a085dbc2398c8430af1c09e7343f6": 0.1
+          /* You will want a universal address here to cover all your coins. Possibly hack on 
+             https://github.com/chiguireitor/nomp-pubkey-generator to get a good idea. 
+             Feel free to donate using the BTC address 1BRUcdAdjdQoAgUwcN7nbNDzqhL92ub3xE */
+        "The address for stratum fees": 0.1
     },
 
     "blockRefreshInterval": 1000, //How often to poll RPC daemons for new blocks, in milliseconds
@@ -81,21 +96,21 @@ var pool = Stratum.createPool({
        be configured to use its own pool difficulty and variable difficulty settings. varDiff is
        optional and will only be used for the ports you configure it for. */
     "ports": {
-        "3032": { //A port for your miners to connect to
+        "3333": { //A port for your miners to connect to
             "diff": 32, //the pool difficulty for this port
 
             /* Variable difficulty is a feature that will automatically adjust difficulty for
                individual miners based on their hashrate in order to lower networking overhead */
             "varDiff": {
                 "minDiff": 8, //Minimum difficulty
-                "maxDiff": 512, //Network difficulty will be used if it is lower than this
+                "maxDiff": 8192, //Network difficulty will be used if it is lower than this
                 "targetTime": 15, //Try to get 1 share per this many seconds
                 "retargetTime": 90, //Check to see if we should retarget every this many seconds
-                "variancePercent": 30 //Allow time to very this % from target without retargeting
+                "variancePercent": 30 //Allow time to vary this % from target without retargeting
             }
         },
-        "3256": { //Another port for your miners to connect to, this port does not use varDiff
-            "diff": 256 //The pool difficulty
+        "3334": { //Another port for your miners to connect to, this port does not use varDiff
+            "diff": 2048 //The pool difficulty
         }
     },
 
@@ -111,8 +126,8 @@ var pool = Stratum.createPool({
         {   //Main daemon instance
             "host": "127.0.0.1",
             "port": 9932,
-            "user": "catcoinrpc",
-            "password": "74QL5rZ9h8xZbLmwdNzW3cBRjJNQ6fy3b8pB5bJ6oURF"
+            "user": "litecoinrpc",
+            "password": "supersecretpassword"
         }
     ],
 
@@ -175,15 +190,63 @@ var pool = Stratum.createPool({
     error: 'low share difficulty' //set if share is rejected for some reason
 */
 pool.on('share', function(isValidShare, isValidBlock, data){
+<<<<<<< HEAD
     if (isValidShare)
         console.log('Valid share submitted');
     else if (data.blockHash)
-        console.log('We thought a block was found but it was rejected by the daemon');
+        console.log('Nu uh uh, not today! We thought a block was found but it was rejected by the daemon');
     else
-        console.log('Invalid share submitted');
+        console.log('Try again! Invalid share submitted');
+=======
+ 
+    //maincoin
+    var coin = myCoin.name;
+    storeShare(isValidShare, isValidBlock, data, coin);
+
+	//loop through auxcoins
+	for(var i = 0; i < myAuxCoins.length; i++) {
+		coin = myAuxCoins[i].name;
+		storeShare(isValidShare, isValidBlock, data, coin);
+	}
+    
+});
+
+//store each share/block submission for a given coin
+function storeShare(isValidShare, isValidBlock, data, coin) {
+	var redisCommands = [];
+	
+	if (isValidShare){
+        redisCommands.push(['hincrbyfloat', coin + ':shares:roundCurrent', data.worker, data.difficulty]);
+        redisCommands.push(['hincrby', coin + ':stats', 'validShares', 1]);
+    }
+    else{
+        redisCommands.push(['hincrby', coin + ':stats', 'invalidShares', 1]);
+    }
+    /* Stores share diff, worker, and unique value with a score that is the timestamp. Unique value ensures it
+       doesn't overwrite an existing entry, and timestamp as score lets us query shares from last X minutes to
+       generate hashrate for each worker and pool. */
+    var dateNow = Date.now();
+    var hashrateData = [ isValidShare ? data.difficulty : -data.difficulty, data.worker, dateNow];
+    redisCommands.push(['zadd', coin + ':hashrate', dateNow / 1000 | 0, hashrateData.join(':')]);
+
+    if (isValidBlock){
+        redisCommands.push(['rename', coin + ':shares:roundCurrent', coin + ':shares:round' + data.height]);
+        redisCommands.push(['sadd', coin + ':blocksPending', [data.blockHash, data.txHash, data.height].join(':')]);
+        redisCommands.push(['hincrby', coin + ':stats', 'validBlocks', 1]);
+    }
+    else if (shareData.blockHash){
+        redisCommands.push(['hincrby', coin + ':stats', 'invalidBlocks', 1]);
+    }
+
+    connection.multi(redisCommands).exec(function(err, replies){
+        if (err)
+            logger.error(logSystem, logComponent, logSubCat, 'Error with share processor multi ' + JSON.stringify(err));
+    });
+    
+>>>>>>> b900b19c2bc03482cc6589f19eaa22cbd62b648c
 
     console.log('share data: ' + JSON.stringify(data));
-});
+}
 
 /*
     Called when a block, auxillery or primary, is found
