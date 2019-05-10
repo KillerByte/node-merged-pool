@@ -1,39 +1,44 @@
 {
-    "name": "merged-pool",
-    "version": "0.1.10",
+    "name": "merged-pooler",
+    "version": "1.0.0",
     "description": "High performance Stratum poolserver in Node.js for merged mining",
     "keywords": [
         "stratum",
-	    "merged",
+	"merged",
         "mining",
         "pool",
         "server",
         "poolserver",
         "bitcoin",
         "litecoin",
-        "scrypt"
+        "scrypt",
+        "multipool",
+        "multicoin"
     ],
-    "homepage": "https://github.com/KillerByte/node-merged-pool",
+    "homepage": "https://github.com/UNOMP/node-merged-pool",
     "bugs": {
-        "url": "https://github.com/KillerByte/node-merged-pool/issues"
+        "url": "https://github.com/UNOMP/node-merged-pool/issues"
     },
     "license": "GPL-2.0",
     "author": "Daniel Beal",
     "contributors": [
-	    "zone117x",
+	"zone117x",
         "vekexasia",
-        "TheSeven"
+        "TheSeven",
+        "sigwo",
+        "infernoman"
     ],
     "main": "lib/index.js",
     "repository": {
         "type": "git",
-        "url": "https://github.com/KillerByte/node-merged-pool.git"
+        "url": "https://github.com/UNOMP/node-merged-pool.git"
     },
     "dependencies": {
-        "multi-hashing": "git://github.com/zone117x/node-multi-hashing.git",
+        "unomp-multi-hashing": "*",
         "bignum": "*",
         "base58-native": "*",
-        "async": "*"
+        "async": "*",
+        "redis": "*"
     },
     "engines": {
         "node": ">=0.10"
